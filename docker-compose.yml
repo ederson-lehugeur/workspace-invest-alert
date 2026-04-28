@@ -1,0 +1,139 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: invest-alert-mysql
+    ports:
+      - "3307:3306"
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: investalert
+      MYSQL_USER: investalert
+      MYSQL_PASSWORD: investalert
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      - invest-alert-data:/var/lib/mysql
+      - ./invest-db-migration/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+      - ./invest-db-migration/01-seed-demo-user.sql:/docker-entrypoint-initdb.d/01-seed-demo-user.sql:ro
+      - ./invest-db-migration/02-seed-assets.sql:/docker-entrypoint-initdb.d/02-seed-assets.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  invest-alert-api:
+    build: ./invest-alert-api
+    container_name: invest-alert-api
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      JAVA_OPTS: -Duser.timezone=${TZ:-America/Sao_Paulo}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: investalert
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: root
+      SPRING_SQL_INIT_MODE: never
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-secret-key-do-not-use-in-production-1234567890}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: dispatcher-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dispatcher-service:
+    build: ./dispatcher-service
+    container_name: dispatcher-service
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      JAVA_OPTS: -Duser.timezone=${TZ:-America/Sao_Paulo}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: investalert
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: root
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SMTP_HOST: ${SMTP_HOST:-smtp.example.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-user@example.com}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-changeme}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  asset-update-service:
+    build: ./asset-update-service
+    container_name: asset-update-service
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      JAVA_OPTS: -Duser.timezone=${TZ:-America/Sao_Paulo}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: investalert
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: root
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  scheduler-service:
+    build: ./scheduler-service
+    container_name: scheduler-service
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      JAVA_OPTS: -Duser.timezone=${TZ:-America/Sao_Paulo}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: investalert
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: root
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SCHEDULER_INTERVAL_MS: ${SCHEDULER_INTERVAL_MS:-300000}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  invest-alert-front:
+    build: ./invest-alert-front
+    container_name: invest-alert-front
+    ports:
+      - "4200:80"
+    depends_on:
+      - invest-alert-api
+
+volumes:
+  invest-alert-data:
