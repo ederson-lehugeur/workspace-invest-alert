@@ -15,8 +15,10 @@ services:
     volumes:
       - invest-alert-data:/var/lib/mysql
       - ./invest-db-migration/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
-      - ./invest-db-migration/01-seed-demo-user.sql:/docker-entrypoint-initdb.d/01-seed-demo-user.sql:ro
+      - ./invest-db-migration/01-seed-roles-permissions.sql:/docker-entrypoint-initdb.d/01-seed-roles-permissions.sql:ro
       - ./invest-db-migration/02-seed-assets.sql:/docker-entrypoint-initdb.d/02-seed-assets.sql:ro
+      - ./invest-db-migration/03-seed-demo-user.sql:/docker-entrypoint-initdb.d/03-seed-demo-user.sql:ro
+      - ./invest-db-migration/04-seed-admin-user.sql:/docker-entrypoint-initdb.d/04-seed-admin-user.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
