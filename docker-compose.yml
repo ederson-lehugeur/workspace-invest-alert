@@ -14,7 +14,7 @@ services:
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     volumes:
       - invest-alert-data:/var/lib/mysql
-      - ./invest-db-migration/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+      - ./invest-db-migration/00-schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
       - ./invest-db-migration/01-seed-roles-permissions.sql:/docker-entrypoint-initdb.d/01-seed-roles-permissions.sql:ro
       - ./invest-db-migration/02-seed-assets.sql:/docker-entrypoint-initdb.d/02-seed-assets.sql:ro
       - ./invest-db-migration/03-seed-demo-user.sql:/docker-entrypoint-initdb.d/03-seed-demo-user.sql:ro
