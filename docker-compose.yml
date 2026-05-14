@@ -41,6 +41,8 @@ services:
       SPRING_SQL_INIT_MODE: never
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
       APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-secret-key-do-not-use-in-production-1234567890}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-900000}
+      JWT_REFRESH_EXPIRATION_SECONDS: ${JWT_REFRESH_EXPIRATION_SECONDS:-3600}
     depends_on:
       mysql:
         condition: service_healthy
